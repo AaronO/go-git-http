@@ -20,7 +20,7 @@ type GitHttp struct {
 	ProjectRoot string
 
 	// Path to git binary
-	GitBinPath  string
+	GitBinPath string
 
 	// Access rules
 	UploadPack  bool
