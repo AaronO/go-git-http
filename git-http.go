@@ -34,10 +34,19 @@ type GitHttp struct {
 type Event struct {
 	Type EventType `json:"type"`
 
+	////
 	// Set for pushes and pulls
+	////
+
+	// SHA of commit
 	Commit string `json:"commit"`
 
+	// Path to bare repo
+	Dir string
+
+	////
 	// Set for pushes or tagging
+	////
 	Tag string `json:"tag,omitempty"`
 	Last string `json:"last,omitempty"`
 	Branch string `json:"branch,omitempty"`
@@ -200,6 +209,7 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) {
 		if matches != nil {
 			for _, m := range matches {
 				g.event(Event{
+					Dir: dir,
 					Type: FETCH,
 					Commit: m[1],
 				})
@@ -210,6 +220,7 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) {
 		if matches != nil {
 			for _, m := range matches {
 				e := Event{
+					Dir: dir,
 					Last: m[1],
 					Commit: m[2],
 				}
