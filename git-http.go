@@ -25,6 +25,62 @@ type GitHttp struct {
 	// Access rules
 	UploadPack  bool
 	ReceivePack bool
+
+	// Event handling functions
+	EventHandler func(ev Event)
+}
+
+// An event (triggered on push/pull)
+type Event struct {
+	Type EventType `json:"type"`
+
+	// Set for pushes and pulls
+	Commit string `json:"commit"`
+
+	// Set for pushes or tagging
+	Tag string `json:"tag,omitempty"`
+	Last string `json:"last,omitempty"`
+	Branch string `json:"branch,omitempty"`
+}
+
+type EventType int
+
+// Possible event types
+const (
+	TAG = iota + 1
+	PUSH
+	FETCH
+)
+
+func (e EventType) String() string {
+	switch e {
+		case TAG:
+			return "tag"
+		case PUSH:
+			return "push"
+		case FETCH:
+			return "fetch"
+	}
+	return "unknown"
+}
+
+func (e EventType) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`"%s"`, e)), nil
+}
+
+func (e EventType) UnmarshalJSON(data []byte) error {
+	str := string(data[:])
+	switch str {
+		case "tag":
+			e = TAG
+		case "push":
+			e = PUSH
+		case "fetch":
+			e = FETCH
+		default:
+			return fmt.Errorf("'%s' is not a known git event type")
+	}
+	return nil
 }
 
 // Implement the http.Handler interface
@@ -111,6 +167,21 @@ func (g *GitHttp) requestHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// Regexes to detect types of actions (fetch, push, etc ...)
+var (
+	receivePackRegex = regexp.MustCompile("([0-9a-fA-F]{40}) ([0-9a-fA-F]{40}) refs\\/(heads|tags)\\/(.*?)( |00|\u0000)|^(0000)$")
+	uploadPackRegex  = regexp.MustCompile("^\\S+ ([0-9a-fA-F]{40})")
+)
+
+// Publish event if EventHandler is set
+func (g *GitHttp) event(e Event) {
+	if g.EventHandler != nil {
+		g.EventHandler(e)
+	} else {
+		fmt.Printf("EVENT: %q\n", e)
+	}
+}
+
 // Actual command handling functions
 
 func (g *GitHttp) serviceRpc(hr HandlerReq) {
@@ -123,6 +194,39 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) {
 	}
 
 	input, _ := ioutil.ReadAll(r.Body)
+
+	if(rpc == "upload-pack") {
+		matches := uploadPackRegex.FindAllStringSubmatch(string(input[:]), -1)
+		if matches != nil {
+			for _, m := range matches {
+				g.event(Event{
+					Type: FETCH,
+					Commit: m[1],
+				})
+			}
+		}
+	} else if(rpc == "receive-pack") {
+		matches := receivePackRegex.FindAllStringSubmatch(string(input[:]), -1)
+		if matches != nil {
+			for _, m := range matches {
+				e := Event{
+					Last: m[1],
+					Commit: m[2],
+				}
+
+				// Handle pushes to branches and tags differently
+				if m[3] == "heads" {
+					e.Type = PUSH
+					e.Branch = m[4]
+				} else {
+					e.Type = TAG
+					e.Tag = m[4]
+				}
+
+				g.event(e)
+			}
+		}
+	}
 
 	w.Header().Set("Content-Type", fmt.Sprintf("application/x-git-%s-result", rpc))
 	w.WriteHeader(http.StatusOK)
