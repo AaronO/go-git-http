@@ -47,8 +47,8 @@ type Event struct {
 	////
 	// Set for pushes or tagging
 	////
-	Tag string `json:"tag,omitempty"`
-	Last string `json:"last,omitempty"`
+	Tag    string `json:"tag,omitempty"`
+	Last   string `json:"last,omitempty"`
 	Branch string `json:"branch,omitempty"`
 }
 
@@ -63,12 +63,12 @@ const (
 
 func (e EventType) String() string {
 	switch e {
-		case TAG:
-			return "tag"
-		case PUSH:
-			return "push"
-		case FETCH:
-			return "fetch"
+	case TAG:
+		return "tag"
+	case PUSH:
+		return "push"
+	case FETCH:
+		return "fetch"
 	}
 	return "unknown"
 }
@@ -80,14 +80,14 @@ func (e EventType) MarshalJSON() ([]byte, error) {
 func (e EventType) UnmarshalJSON(data []byte) error {
 	str := string(data[:])
 	switch str {
-		case "tag":
-			e = TAG
-		case "push":
-			e = PUSH
-		case "fetch":
-			e = FETCH
-		default:
-			return fmt.Errorf("'%s' is not a known git event type")
+	case "tag":
+		e = TAG
+	case "push":
+		e = PUSH
+	case "fetch":
+		e = FETCH
+	default:
+		return fmt.Errorf("'%s' is not a known git event type")
 	}
 	return nil
 }
@@ -204,24 +204,24 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) {
 
 	input, _ := ioutil.ReadAll(r.Body)
 
-	if(rpc == "upload-pack") {
+	if rpc == "upload-pack" {
 		matches := uploadPackRegex.FindAllStringSubmatch(string(input[:]), -1)
 		if matches != nil {
 			for _, m := range matches {
 				g.event(Event{
-					Dir: dir,
-					Type: FETCH,
+					Dir:    dir,
+					Type:   FETCH,
 					Commit: m[1],
 				})
 			}
 		}
-	} else if(rpc == "receive-pack") {
+	} else if rpc == "receive-pack" {
 		matches := receivePackRegex.FindAllStringSubmatch(string(input[:]), -1)
 		if matches != nil {
 			for _, m := range matches {
 				e := Event{
-					Dir: dir,
-					Last: m[1],
+					Dir:    dir,
+					Last:   m[1],
 					Commit: m[2],
 				}
 
