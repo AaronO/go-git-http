@@ -1,6 +1,9 @@
 package githttp
 
 import (
+	"compress/flate"
+	"compress/gzip"
+
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -202,7 +205,13 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) {
 		return
 	}
 
-	input, _ := ioutil.ReadAll(r.Body)
+	reader, err := requestReader(r)
+	if err != nil {
+		fmt.Printf("Error getting reader: %s\n", err)
+		return
+	}
+
+	input, _ := ioutil.ReadAll(reader)
 
 	if rpc == "upload-pack" {
 		matches := uploadPackRegex.FindAllStringSubmatch(string(input[:]), -1)
@@ -404,6 +413,21 @@ func (g *GitHttp) gitCommand(dir string, args ...string) []byte {
 	}
 
 	return out
+}
+
+// requestReader returns an io.ReadCloser
+// that will decode data if needed, depending on the
+// "content-encoding" header
+func requestReader(req *http.Request) (io.ReadCloser, error) {
+	switch req.Header.Get("content-encoding") {
+		case "gzip":
+			return gzip.NewReader(req.Body)
+		case "deflate":
+			return flate.NewReader(req.Body), nil
+	}
+
+	// If no encoding, use raw body
+	return req.Body, nil
 }
 
 // HTTP parsing utility functions
