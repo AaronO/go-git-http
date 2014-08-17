@@ -6,6 +6,7 @@ import (
 
 // An event (triggered on push/pull)
 type Event struct {
+	// One of tag/push/fetch
 	Type EventType `json:"type"`
 
 	////
@@ -24,6 +25,10 @@ type Event struct {
 	Tag    string `json:"tag,omitempty"`
 	Last   string `json:"last,omitempty"`
 	Branch string `json:"branch,omitempty"`
+
+	// Error contains the error that happened (if any)
+	// during this action/event
+	Error error
 }
 
 type EventType int

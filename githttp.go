@@ -96,19 +96,29 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) {
 		log.Print(err)
 	}
 
+	// Scan's git command's output for errors
+	gitReader := &GitReader{
+		ReadCloser: stdout,
+	}
+
 	// Copy input to git binary
 	io.Copy(stdin, rpcReader)
 
 	// Write git binary's output to http response
-	io.Copy(w, stdout)
+	io.Copy(w, gitReader)
 
 	// Wait till command has completed
-	cmd.Wait()
+	mainError := cmd.Wait()
+
+	if mainError == nil {
+		mainError = gitReader.GitError
+	}
 
 	// Fire events
 	for _, e := range rpcReader.Events {
 		// Set directory to current repo
 		e.Dir = dir
+		e.Error = mainError
 
 		// Fire event
 		g.event(e)

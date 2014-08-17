@@ -24,7 +24,7 @@ var (
 	uploadPackRegex  = regexp.MustCompile("^\\S+ ([0-9a-fA-F]{40})")
 )
 
-//
+// Implement the io.Reader interface
 func (r *RpcReader) Read(p []byte) (n int, err error) {
 	// Relay call
 	n, err = r.ReadCloser.Read(p)
