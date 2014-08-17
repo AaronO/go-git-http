@@ -3,13 +3,11 @@ package githttp
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path"
-	"regexp"
 	"strings"
 )
 
@@ -44,12 +42,6 @@ func New(root string) *GitHttp {
 	}
 }
 
-// Regexes to detect types of actions (fetch, push, etc ...)
-var (
-	receivePackRegex = regexp.MustCompile("([0-9a-fA-F]{40}) ([0-9a-fA-F]{40}) refs\\/(heads|tags)\\/(.*?)( |00|\u0000)|^(0000)$")
-	uploadPackRegex  = regexp.MustCompile("^\\S+ ([0-9a-fA-F]{40})")
-)
-
 // Publish event if EventHandler is set
 func (g *GitHttp) event(e Event) {
 	if g.EventHandler != nil {
@@ -70,47 +62,17 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) {
 		return
 	}
 
+	// Reader that decompresses if necessary
 	reader, err := requestReader(r)
 	if err != nil {
 		fmt.Printf("Error getting reader: %s\n", err)
 		return
 	}
 
-	input, _ := ioutil.ReadAll(reader)
-
-	if rpc == "upload-pack" {
-		matches := uploadPackRegex.FindAllStringSubmatch(string(input[:]), -1)
-		if matches != nil {
-			for _, m := range matches {
-				g.event(Event{
-					Dir:    dir,
-					Type:   FETCH,
-					Commit: m[1],
-				})
-			}
-		}
-	} else if rpc == "receive-pack" {
-		matches := receivePackRegex.FindAllStringSubmatch(string(input[:]), -1)
-		if matches != nil {
-			for _, m := range matches {
-				e := Event{
-					Dir:    dir,
-					Last:   m[1],
-					Commit: m[2],
-				}
-
-				// Handle pushes to branches and tags differently
-				if m[3] == "heads" {
-					e.Type = PUSH
-					e.Branch = m[4]
-				} else {
-					e.Type = TAG
-					e.Tag = m[4]
-				}
-
-				g.event(e)
-			}
-		}
+	// Reader that scans for events
+	rpcReader := &RpcReader{
+		ReadCloser: reader,
+		Rpc: rpc,
 	}
 
 	w.Header().Set("Content-Type", fmt.Sprintf("application/x-git-%s-result", rpc))
@@ -119,7 +81,7 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) {
 	args := []string{rpc, "--stateless-rpc", dir}
 	cmd := exec.Command(g.GitBinPath, args...)
 	cmd.Dir = dir
-	in, err := cmd.StdinPipe()
+	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		log.Print(err)
 	}
@@ -134,9 +96,23 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) {
 		log.Print(err)
 	}
 
-	in.Write(input)
+	// Copy input to git binary
+	io.Copy(stdin, rpcReader)
+
+	// Write git binary's output to http response
 	io.Copy(w, stdout)
+
+	// Wait till command has completed
 	cmd.Wait()
+
+	// Fire events
+	for _, e := range rpcReader.Events {
+		// Set directory to current repo
+		e.Dir = dir
+
+		// Fire event
+		g.event(e)
+	}
 }
 
 func (g *GitHttp) getInfoRefs(hr HandlerReq) {
