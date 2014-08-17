@@ -72,7 +72,7 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) {
 	// Reader that scans for events
 	rpcReader := &RpcReader{
 		ReadCloser: reader,
-		Rpc: rpc,
+		Rpc:        rpc,
 	}
 
 	w.Header().Set("Content-Type", fmt.Sprintf("application/x-git-%s-result", rpc))

@@ -37,7 +37,6 @@ func (r *RpcReader) Read(p []byte) (n int, err error) {
 	return n, err
 }
 
-
 func (r *RpcReader) scan(p []byte) {
 	events := []Event{}
 
