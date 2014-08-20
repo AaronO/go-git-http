@@ -3,6 +3,7 @@ package githttp
 import (
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -96,7 +97,6 @@ func (g *GitHttp) requestHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Repo not found on disk
 	if err != nil {
-		log.Print(err)
 		renderNotFound(w)
 		return
 	}
@@ -105,5 +105,16 @@ func (g *GitHttp) requestHandler(w http.ResponseWriter, r *http.Request) {
 	hr := HandlerReq{w, r, rpc, dir, file}
 
 	// Call handler
-	service.Handler(hr)
+	if err := service.Handler(hr); err != nil {
+		if os.IsNotExist(err) {
+			renderNotFound(w)
+			return
+		}
+		switch err.(type) {
+			case *ErrorNoAccess:
+				renderNoAccess(w)
+				return
+		}
+		http.Error(w, err.Error(), 500)
+	}
 }
