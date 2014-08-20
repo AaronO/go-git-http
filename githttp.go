@@ -3,7 +3,6 @@ package githttp
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -53,20 +52,22 @@ func (g *GitHttp) event(e Event) {
 
 // Actual command handling functions
 
-func (g *GitHttp) serviceRpc(hr HandlerReq) {
+func (g *GitHttp) serviceRpc(hr HandlerReq) error {
 	w, r, rpc, dir := hr.w, hr.r, hr.Rpc, hr.Dir
-	access := g.hasAccess(r, dir, rpc, true)
+
+	access, err := g.hasAccess(r, dir, rpc, true)
+	if err != nil {
+		return err
+	}
 
 	if access == false {
-		renderNoAccess(w)
-		return
+		return &ErrorNoAccess{hr.Dir}
 	}
 
 	// Reader that decompresses if necessary
 	reader, err := requestReader(r)
 	if err != nil {
-		fmt.Printf("Error getting reader: %s\n", err)
-		return
+		return err
 	}
 
 	// Reader that scans for events
@@ -83,17 +84,19 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) {
 	cmd.Dir = dir
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		log.Print(err)
+		return err
 	}
+	defer stdin.Close()
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Print(err)
+		return err
 	}
+	defer stdout.Close()
 
 	err = cmd.Start()
 	if err != nil {
-		log.Print(err)
+		return err
 	}
 
 	// Scan's git command's output for errors
@@ -123,71 +126,83 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) {
 		// Fire event
 		g.event(e)
 	}
+
+	// May be nil if all is good
+	return mainError
 }
 
-func (g *GitHttp) getInfoRefs(hr HandlerReq) {
+func (g *GitHttp) getInfoRefs(hr HandlerReq) error {
 	w, r, dir := hr.w, hr.r, hr.Dir
 	service_name := getServiceType(r)
-	access := g.hasAccess(r, dir, service_name, false)
+	access, err := g.hasAccess(r, dir, service_name, false)
+	if err != nil {
+		return err
+	}
 
-	if access {
-		args := []string{service_name, "--stateless-rpc", "--advertise-refs", "."}
-		refs := g.gitCommand(dir, args...)
-
-		hdrNocache(w)
-		w.Header().Set("Content-Type", fmt.Sprintf("application/x-git-%s-advertisement", service_name))
-		w.WriteHeader(http.StatusOK)
-		w.Write(packetWrite("# service=git-" + service_name + "\n"))
-		w.Write(packetFlush())
-		w.Write(refs)
-	} else {
+	if !access {
 		g.updateServerInfo(dir)
 		hdrNocache(w)
-		sendFile("text/plain; charset=utf-8", hr)
+		return sendFile("text/plain; charset=utf-8", hr)
 	}
+
+	args := []string{service_name, "--stateless-rpc", "--advertise-refs", "."}
+	refs, err := g.gitCommand(dir, args...)
+	if err != nil {
+		return err
+	}
+
+	hdrNocache(w)
+	w.Header().Set("Content-Type", fmt.Sprintf("application/x-git-%s-advertisement", service_name))
+	w.WriteHeader(http.StatusOK)
+	w.Write(packetWrite("# service=git-" + service_name + "\n"))
+	w.Write(packetFlush())
+	w.Write(refs)
+
+	return nil
 }
 
-func (g *GitHttp) getInfoPacks(hr HandlerReq) {
+func (g *GitHttp) getInfoPacks(hr HandlerReq) error {
 	hdrCacheForever(hr.w)
-	sendFile("text/plain; charset=utf-8", hr)
+	return sendFile("text/plain; charset=utf-8", hr)
 }
 
-func (g *GitHttp) getLooseObject(hr HandlerReq) {
+func (g *GitHttp) getLooseObject(hr HandlerReq) error {
 	hdrCacheForever(hr.w)
-	sendFile("application/x-git-loose-object", hr)
+	return sendFile("application/x-git-loose-object", hr)
 }
 
-func (g *GitHttp) getPackFile(hr HandlerReq) {
+func (g *GitHttp) getPackFile(hr HandlerReq) error {
 	hdrCacheForever(hr.w)
-	sendFile("application/x-git-packed-objects", hr)
+	return sendFile("application/x-git-packed-objects", hr)
 }
 
-func (g *GitHttp) getIdxFile(hr HandlerReq) {
+func (g *GitHttp) getIdxFile(hr HandlerReq) error {
 	hdrCacheForever(hr.w)
-	sendFile("application/x-git-packed-objects-toc", hr)
+	return sendFile("application/x-git-packed-objects-toc", hr)
 }
 
-func (g *GitHttp) getTextFile(hr HandlerReq) {
+func (g *GitHttp) getTextFile(hr HandlerReq) error {
 	hdrNocache(hr.w)
-	sendFile("text/plain", hr)
+	return sendFile("text/plain", hr)
 }
 
 // Logic helping functions
 
-func sendFile(content_type string, hr HandlerReq) {
+func sendFile(content_type string, hr HandlerReq) error {
 	w, r := hr.w, hr.r
 	req_file := path.Join(hr.Dir, hr.File)
 
 	f, err := os.Stat(req_file)
-	if os.IsNotExist(err) {
-		renderNotFound(w)
-		return
+	if err != nil {
+		return err
 	}
 
 	w.Header().Set("Content-Type", content_type)
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", f.Size()))
 	w.Header().Set("Last-Modified", f.ModTime().Format(http.TimeFormat))
 	http.ServeFile(w, r, req_file)
+
+	return nil
 }
 
 func (g *GitHttp) getGitDir(file_path string) (string, error) {
@@ -197,7 +212,6 @@ func (g *GitHttp) getGitDir(file_path string) (string, error) {
 		cwd, err := os.Getwd()
 
 		if err != nil {
-			log.Print(err)
 			return "", err
 		}
 
@@ -212,56 +226,57 @@ func (g *GitHttp) getGitDir(file_path string) (string, error) {
 	return f, nil
 }
 
-func (g *GitHttp) hasAccess(r *http.Request, dir string, rpc string, check_content_type bool) bool {
+func (g *GitHttp) hasAccess(r *http.Request, dir string, rpc string, check_content_type bool) (bool, error) {
 	if check_content_type {
 		if r.Header.Get("Content-Type") != fmt.Sprintf("application/x-git-%s-request", rpc) {
-			return false
+			return false, nil
 		}
 	}
 
 	if !(rpc == "upload-pack" || rpc == "receive-pack") {
-		return false
+		return false, nil
 	}
 	if rpc == "receive-pack" {
-		return g.ReceivePack
+		return g.ReceivePack, nil
 	}
 	if rpc == "upload-pack" {
-		return g.UploadPack
+		return g.UploadPack, nil
 	}
 
 	return g.getConfigSetting(rpc, dir)
 }
 
-func (g *GitHttp) getConfigSetting(service_name string, dir string) bool {
+func (g *GitHttp) getConfigSetting(service_name string, dir string) (bool, error) {
 	service_name = strings.Replace(service_name, "-", "", -1)
-	setting := g.getGitConfig("http."+service_name, dir)
-
-	if service_name == "uploadpack" {
-		return setting != "false"
+	setting, err := g.getGitConfig("http."+service_name, dir)
+	if err != nil {
+		return false, nil
 	}
 
-	return setting == "true"
+	if service_name == "uploadpack" {
+		return setting != "false", nil
+	}
+
+	return setting == "true", nil
 }
 
-func (g *GitHttp) getGitConfig(config_name string, dir string) string {
+func (g *GitHttp) getGitConfig(config_name string, dir string) (string, error) {
 	args := []string{"config", config_name}
-	out := string(g.gitCommand(dir, args...))
-	return out[0 : len(out)-1]
+	out, err := g.gitCommand(dir, args...)
+	if err != nil {
+		return "", err
+	}
+	return string(out)[0 : len(out)-1], nil
 }
 
-func (g *GitHttp) updateServerInfo(dir string) []byte {
+func (g *GitHttp) updateServerInfo(dir string) ([]byte, error) {
 	args := []string{"update-server-info"}
 	return g.gitCommand(dir, args...)
 }
 
-func (g *GitHttp) gitCommand(dir string, args ...string) []byte {
+func (g *GitHttp) gitCommand(dir string, args ...string) ([]byte, error) {
 	command := exec.Command(g.GitBinPath, args...)
 	command.Dir = dir
-	out, err := command.Output()
 
-	if err != nil {
-		log.Print(err)
-	}
-
-	return out
+	return command.Output()
 }

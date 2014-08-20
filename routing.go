@@ -9,7 +9,7 @@ import (
 
 type Service struct {
 	Method  string
-	Handler func(HandlerReq)
+	Handler func(HandlerReq) error
 	Rpc     string
 }
 
