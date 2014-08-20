@@ -76,8 +76,8 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) error {
 		Rpc:        rpc,
 	}
 
+	// Set content type
 	w.Header().Set("Content-Type", fmt.Sprintf("application/x-git-%s-result", rpc))
-	w.WriteHeader(http.StatusOK)
 
 	args := []string{rpc, "--stateless-rpc", dir}
 	cmd := exec.Command(g.GitBinPath, args...)
