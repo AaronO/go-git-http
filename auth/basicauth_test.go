@@ -20,3 +20,9 @@ func TestHeaderParsing(t *testing.T) {
 		t.Errorf("Detected password does not match: '%s'", auth.Pass)
 	}
 }
+
+func TestEmptyHeader(t *testing.T) {
+	if _, err := parseAuthHeader(""); err == nil {
+		t.Errorf("Empty headers should generate errors")
+	}
+}
