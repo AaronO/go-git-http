@@ -31,7 +31,8 @@ func Authenticator(authf func(AuthInfo) (bool, error)) func(http.Handler) http.H
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			auth, err := parseAuthHeader(req.Header.Get("Authorization"))
 			if err != nil {
-				http.Error(w, err.Error(), 500)
+				w.Header().Set("WWW-Authenticate", `Basic realm="git server"`)
+				http.Error(w, err.Error(), 401)
 				return
 			}
 
