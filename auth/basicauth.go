@@ -19,7 +19,7 @@ var (
 
 func parseAuthHeader(header string) (*BasicAuth, error) {
 	parts := strings.SplitN(header, " ", 2)
-	if len(parts) > 2 {
+	if len(parts) < 2 {
 		return nil, fmt.Errorf("Invalid authorization header, not enought parts")
 	}
 
