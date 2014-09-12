@@ -1,9 +1,9 @@
 package github
 
 import (
-	"fmt"
-	"crypto/sha1"
 	"crypto/hmac"
+	"crypto/sha1"
+	"fmt"
 )
 
 // IsValidPayload checks if the github payload's hash fits with
@@ -15,7 +15,6 @@ func IsValidPayload(headerHash string, payload []byte) {
 		[]byte(headerHash),
 	)
 }
-
 
 // HashPayload computes the hash of payload's body according to the webhook's secret token
 // see https://developer.github.com/webhooks/securing/#validating-payloads-from-github

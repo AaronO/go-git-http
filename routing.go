@@ -111,9 +111,9 @@ func (g *GitHttp) requestHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		switch err.(type) {
-			case *ErrorNoAccess:
-				renderNoAccess(w)
-				return
+		case *ErrorNoAccess:
+			renderNoAccess(w)
+			return
 		}
 		http.Error(w, err.Error(), 500)
 	}
