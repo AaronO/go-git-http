@@ -41,6 +41,14 @@ func New(root string) *GitHttp {
 	}
 }
 
+// Build root directory if doesn't exist
+func (g *GitHttp) Init() (*GitHttp, error) {
+	if err := os.MkdirAll(g.ProjectRoot, os.ModePerm); err != nil {
+		return nil, err
+	}
+	return g, nil
+}
+
 // Publish event if EventHandler is set
 func (g *GitHttp) event(e Event) {
 	if g.EventHandler != nil {
