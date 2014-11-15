@@ -8,7 +8,7 @@ import (
 
 // IsValidPayload checks if the github payload's hash fits with
 // the hash computed by GitHub sent as a header
-func IsValidPayload(headerHash string, payload []byte) {
+func IsValidPayload(secret, headerHash string, payload []byte) bool {
 	hash := HashPayload(payload)
 	return hmac.Equal(
 		[]byte(hash),

@@ -68,3 +68,9 @@ type GitHubPayload struct {
 	Compare    string         `json:"compare"`
 	Pusher     GitHubPerson   `json:"pusher"`
 }
+
+type PayloadPong struct {
+	Ok    bool   `json:"ok"`
+	Event string `json:"event"`
+	Error error  `json:"error,omitempty"`
+}
