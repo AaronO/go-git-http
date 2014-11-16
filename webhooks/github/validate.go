@@ -9,7 +9,7 @@ import (
 // IsValidPayload checks if the github payload's hash fits with
 // the hash computed by GitHub sent as a header
 func IsValidPayload(secret, headerHash string, payload []byte) bool {
-	hash := HashPayload(payload)
+	hash := HashPayload(secret, payload)
 	return hmac.Equal(
 		[]byte(hash),
 		[]byte(headerHash),

@@ -60,7 +60,7 @@ func Handler(secret string, fn WebhookHandler) http.Handler {
 }
 
 func succeed(w http.ResponseWriter, event string) {
-	render(w, GitHubPayload{
+	render(w, PayloadPong{
 		Ok:    true,
 		Event: event,
 	})
@@ -68,7 +68,7 @@ func succeed(w http.ResponseWriter, event string) {
 
 func fail(w http.ResponseWriter, event string, err error) {
 	w.WriteHeader(500)
-	render(w, GitHubPayload{
+	render(w, PayloadPong{
 		Ok:    false,
 		Event: event,
 		Error: err,
@@ -78,7 +78,7 @@ func fail(w http.ResponseWriter, event string, err error) {
 func render(w http.ResponseWriter, v interface{}) {
 	data, err := json.Marshal(v)
 	if err != nil {
-		http.Error(w, err, 500)
+		http.Error(w, err.Error(), 500)
 		return
 	}
 	w.Write(data)
