@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-type WebhookHandler func(eventname string, payload *GitHubPayload, req *http.Request) bool
+type WebhookHandler func(eventname string, payload *GitHubPayload, req *http.Request) error
 
 func Handler(secret string, fn WebhookHandler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -50,11 +50,10 @@ func Handler(secret string, fn WebhookHandler) http.Handler {
 		}
 
 		// Do something with payload
-		success := fn(event, &payload, req)
-		if success {
+		if err := fn(event, &payload, req); err == nil {
 			_succeed()
 		} else {
-			_fail(nil)
+			_fail(err)
 		}
 	})
 }
