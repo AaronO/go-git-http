@@ -2,6 +2,7 @@ package githttp
 
 import (
 	"fmt"
+	"net/http"
 )
 
 // An event (triggered on push/pull)
