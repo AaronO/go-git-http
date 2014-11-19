@@ -29,6 +29,9 @@ type Event struct {
 	// Error contains the error that happened (if any)
 	// during this action/event
 	Error error
+
+	// Http stuff
+	Request *http.Request
 }
 
 type EventType int

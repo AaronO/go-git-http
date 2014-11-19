@@ -129,6 +129,7 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) error {
 	for _, e := range rpcReader.Events {
 		// Set directory to current repo
 		e.Dir = dir
+		e.Request = hr.r
 		e.Error = mainError
 
 		// Fire event
