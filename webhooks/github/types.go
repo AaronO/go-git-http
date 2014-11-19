@@ -42,6 +42,7 @@ type GitHubRepo struct {
 	HasDownloads bool         `json:"has_downloads"`
 	CreatedAt    time.Time    `json:"created_at"`
 	URL          string       `json:"url"`
+	CloneURL     string       `json:"clone_url"`
 	OpenIssues   int          `json:"open_issues"`
 	Forks        int          `json:"forks"`
 	Private      bool         `json:"private"`
