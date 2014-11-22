@@ -1,7 +1,6 @@
 package githttp
 
 import (
-	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -69,8 +68,6 @@ func (g *GitHttp) getService(path string) (string, *Service) {
 
 // Request handling function
 func (g *GitHttp) requestHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%s %s %s %s", r.RemoteAddr, r.Method, r.URL.Path, r.Proto)
-
 	// Get service for URL
 	repo, service := g.getService(r.URL.Path)
 
