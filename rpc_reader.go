@@ -16,6 +16,9 @@ type RpcReader struct {
 	// List of events RpcReader has picked up through scanning
 	// these events do not contain the "Dir" attribute
 	Events []Event
+
+	// Tracks first event being scanned
+	first bool
 }
 
 // Regexes to detect types of actions (fetch, push, etc ...)
@@ -43,6 +46,10 @@ func (r *RpcReader) scan(p []byte) {
 	switch r.Rpc {
 	case "receive-pack":
 		events = scanPush(p)
+		if !r.first && len(events) == 0 {
+			events = scanPushForce(p)
+			r.first = true
+		}
 	case "upload-pack":
 		events = scanFetch(p)
 	}
@@ -98,4 +105,13 @@ func scanPush(data []byte) []Event {
 	}
 
 	return events
+}
+
+func scanPushForce(data []byte) []Event {
+	return []Event{
+		Event{
+			Type:   PUSH_FORCE,
+			Commit: "HEAD",
+		},
+	}
 }
