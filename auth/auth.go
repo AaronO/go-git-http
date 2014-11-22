@@ -66,11 +66,15 @@ func Authenticator(authf func(AuthInfo) (bool, error)) func(http.Handler) http.H
 }
 
 func isFetch(req *http.Request) bool {
-	return getServiceType(req) == "upload-pack"
+	return isService("upload-pack", req)
 }
 
 func isPush(req *http.Request) bool {
-	return getServiceType(req) == "receive-pack"
+	return isService("receive-pack", req)
+}
+
+func isService(service string, req *http.Request) bool {
+	return getServiceType(req) == service || strings.HasSuffix(req.URL.Path, service)
 }
 
 func repoName(urlPath string) string {
