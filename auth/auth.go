@@ -48,14 +48,18 @@ func Authenticator(authf func(AuthInfo) (bool, error)) func(http.Handler) http.H
 			// Call authentication function
 			authenticated, err := authf(info)
 			if err != nil {
-				http.Error(w, err.Error(), 500)
+				code := 500
+				msg := err.Error()
+				if se, ok := err.(StatusError); ok {
+					code = se.StatusCode()
+				}
+				http.Error(w, msg, code)
 				return
 			}
 
 			// Deny access to repo
 			if !authenticated {
-				w.WriteHeader(http.StatusForbidden)
-				w.Write([]byte("Forbidden"))
+				http.Error(w, "Forbidden", 403)
 				return
 			}
 
@@ -93,4 +97,10 @@ func getServiceType(r *http.Request) string {
 	}
 
 	return strings.Replace(service_type, "git-", "", 1)
+}
+
+// StatusCode is an interface allowing authenticators
+// to pass down error's with an http error code
+type StatusError interface {
+	StatusCode() int
 }
