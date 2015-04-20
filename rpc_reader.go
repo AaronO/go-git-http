@@ -8,7 +8,7 @@ import (
 // RpcReader scans for events in the incoming rpc request data
 type RpcReader struct {
 	// Underlaying reader (to relay calls to)
-	io.ReadCloser
+	io.Reader
 
 	// Rpc type (upload-pack or receive-pack)
 	Rpc string
@@ -30,7 +30,7 @@ var (
 // Implement the io.Reader interface
 func (r *RpcReader) Read(p []byte) (n int, err error) {
 	// Relay call
-	n, err = r.ReadCloser.Read(p)
+	n, err = r.Reader.Read(p)
 
 	// Scan for events
 	if err != nil {

@@ -80,8 +80,8 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) error {
 
 	// Reader that scans for events
 	rpcReader := &RpcReader{
-		ReadCloser: reader,
-		Rpc:        rpc,
+		Reader: reader,
+		Rpc:    rpc,
 	}
 
 	// Set content type
@@ -109,7 +109,7 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) error {
 
 	// Scan's git command's output for errors
 	gitReader := &GitReader{
-		ReadCloser: stdout,
+		Reader: stdout,
 	}
 
 	// Copy input to git binary
