@@ -33,7 +33,7 @@ func (r *RpcReader) Read(p []byte) (n int, err error) {
 	n, err = r.Reader.Read(p)
 
 	// Scan for events
-	if err != nil {
+	if err == nil || err == io.EOF {
 		r.scan(p)
 	}
 
