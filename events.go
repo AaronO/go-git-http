@@ -42,6 +42,7 @@ const (
 	TAG = iota + 1
 	PUSH
 	FETCH
+	PUSH_FORCE
 )
 
 func (e EventType) String() string {
@@ -50,6 +51,8 @@ func (e EventType) String() string {
 		return "tag"
 	case PUSH:
 		return "push"
+	case PUSH_FORCE:
+		return "push-force"
 	case FETCH:
 		return "fetch"
 	}
@@ -67,6 +70,8 @@ func (e EventType) UnmarshalJSON(data []byte) error {
 		e = TAG
 	case "push":
 		e = PUSH
+	case "push-force":
+		e = PUSH_FORCE
 	case "fetch":
 		e = FETCH
 	default:
