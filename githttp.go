@@ -77,6 +77,7 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) error {
 	if err != nil {
 		return err
 	}
+	defer reader.Close()
 
 	// Reader that scans for events
 	rpcReader := &RpcReader{
