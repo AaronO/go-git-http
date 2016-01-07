@@ -80,7 +80,7 @@ func TestRpcReader(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		r := f
+		r := fragmentedReader{f}
 
 		rr := &githttp.RpcReader{
 			Reader: r,
@@ -98,4 +98,19 @@ func TestRpcReader(t *testing.T) {
 			t.Errorf("test %q/%q:\n got: %#v\nwant: %#v\n", tt.rpc, tt.file, got, tt.want)
 		}
 	}
+}
+
+// fragmentedReader reads from R, with each Read call returning at most fragmentLen bytes even
+// if len(p) is greater than fragmentLen.
+// It purposefully adds a layer of inefficiency around R, and exists for testing purposes only.
+type fragmentedReader struct {
+	R io.Reader // Underlying reader.
+}
+
+func (r fragmentedReader) Read(p []byte) (n int, err error) {
+	const fragmentLen = 1
+	if len(p) <= fragmentLen {
+		return r.R.Read(p)
+	}
+	return r.R.Read(p[:fragmentLen])
 }
