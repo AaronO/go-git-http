@@ -66,13 +66,13 @@ func (r *RpcReader) scan(data []byte) {
 }
 
 func scanFetch(data []byte) []Event {
-	matches := uploadPackRegex.FindAllStringSubmatch(string(data[:]), -1)
+	matches := uploadPackRegex.FindAllStringSubmatch(string(data), -1)
 
 	if matches == nil {
-		return []Event{}
+		return nil
 	}
 
-	events := []Event{}
+	var events []Event
 	for _, m := range matches {
 		events = append(events, Event{
 			Type:   FETCH,
@@ -84,13 +84,13 @@ func scanFetch(data []byte) []Event {
 }
 
 func scanPush(data []byte) []Event {
-	matches := receivePackRegex.FindAllStringSubmatch(string(data[:]), -1)
+	matches := receivePackRegex.FindAllStringSubmatch(string(data), -1)
 
 	if matches == nil {
-		return []Event{}
+		return nil
 	}
 
-	events := []Event{}
+	var events []Event
 	for _, m := range matches {
 		e := Event{
 			Last:   m[1],
