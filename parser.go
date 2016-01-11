@@ -114,9 +114,9 @@ func (p *pktLineParser) step() error {
 }
 
 // parsePktLen parses a pkt-len segment.
-// len(h) must be 4.
-func parsePktLen(h []byte) (int, error) {
-	pktLen, err := parseHex(h)
+// len(b) must be 4.
+func parsePktLen(b []byte) (int, error) {
+	pktLen, err := parseHex(b)
 	switch {
 	case err != nil:
 		return 0, err
