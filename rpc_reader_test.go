@@ -37,6 +37,83 @@ func TestRpcReader(t *testing.T) {
 			},
 		},
 
+		// A tag using letters only.
+		{
+			rpc:  "receive-pack",
+			file: "receive-pack.1",
+
+			want: []githttp.Event{
+				(githttp.Event)(githttp.Event{
+					Type:    (githttp.EventType)(githttp.TAG),
+					Commit:  (string)("3da295397738f395c2ca5fd5570f01a9fcea3be3"),
+					Dir:     (string)(""),
+					Tag:     (string)("sometextualtag"),
+					Last:    (string)("0000000000000000000000000000000000000000"),
+					Branch:  (string)(""),
+					Error:   (error)(nil),
+					Request: (*http.Request)(nil),
+				}),
+			},
+		},
+
+		// A tag containing the string "00".
+		{
+			rpc:  "receive-pack",
+			file: "receive-pack.2",
+
+			want: []githttp.Event{
+				(githttp.Event)(githttp.Event{
+					Type:    (githttp.EventType)(githttp.TAG),
+					Commit:  (string)("3da295397738f395c2ca5fd5570f01a9fcea3be3"),
+					Dir:     (string)(""),
+					Tag:     (string)("1.000.1"),
+					Last:    (string)("0000000000000000000000000000000000000000"),
+					Branch:  (string)(""),
+					Error:   (error)(nil),
+					Request: (*http.Request)(nil),
+				}),
+			},
+		},
+
+		// Multiple tags containing string "00" in one git push operation.
+		{
+			rpc:  "receive-pack",
+			file: "receive-pack.3",
+
+			want: []githttp.Event{
+				(githttp.Event)(githttp.Event{
+					Type:    (githttp.EventType)(githttp.TAG),
+					Commit:  (string)("3da295397738f395c2ca5fd5570f01a9fcea3be3"),
+					Dir:     (string)(""),
+					Tag:     (string)("1.000.2"),
+					Last:    (string)("0000000000000000000000000000000000000000"),
+					Branch:  (string)(""),
+					Error:   (error)(nil),
+					Request: (*http.Request)(nil),
+				}),
+				(githttp.Event)(githttp.Event{
+					Type:    (githttp.EventType)(githttp.TAG),
+					Commit:  (string)("3da295397738f395c2ca5fd5570f01a9fcea3be3"),
+					Dir:     (string)(""),
+					Tag:     (string)("1.000.3"),
+					Last:    (string)("0000000000000000000000000000000000000000"),
+					Branch:  (string)(""),
+					Error:   (error)(nil),
+					Request: (*http.Request)(nil),
+				}),
+				(githttp.Event)(githttp.Event{
+					Type:    (githttp.EventType)(githttp.TAG),
+					Commit:  (string)("3da295397738f395c2ca5fd5570f01a9fcea3be3"),
+					Dir:     (string)(""),
+					Tag:     (string)("1.000.4"),
+					Last:    (string)("0000000000000000000000000000000000000000"),
+					Branch:  (string)(""),
+					Error:   (error)(nil),
+					Request: (*http.Request)(nil),
+				}),
+			},
+		},
+
 		{
 			rpc:  "upload-pack",
 			file: "upload-pack.0",
