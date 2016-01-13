@@ -6,22 +6,22 @@ import (
 	"strings"
 )
 
-// RpcReader scans for events in the incoming rpc request data
+// RpcReader scans for events in the incoming rpc request data.
 type RpcReader struct {
-	// Underlaying reader (to relay calls to)
+	// Underlying reader (to relay calls to).
 	io.Reader
 
-	// Rpc type (upload-pack or receive-pack)
+	// Rpc type (receive-pack or upload-pack).
 	Rpc string
 
-	// List of events RpcReader has picked up through scanning
-	// these events do not contain the "Dir" attribute
+	// List of events RpcReader has picked up through scanning.
+	// These events do not have the Dir field set.
 	Events []Event
 
 	pktLineParser pktLineParser
 }
 
-// Implement the io.Reader interface
+// Read implements the io.Reader interface.
 func (r *RpcReader) Read(p []byte) (n int, err error) {
 	// Relay call
 	n, err = r.Reader.Read(p)
