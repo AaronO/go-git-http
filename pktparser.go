@@ -9,12 +9,11 @@ import (
 // pktLineParser is a parser for git pkt-line Format,
 // as documented in https://github.com/git/git/blob/master/Documentation/technical/protocol-common.txt.
 // A zero value of pktLineParser is valid to use as a parser in ready state.
-// Output should be read from Total and Error after Step returns finished true.
+// Output should be read from Lines and Error after Step returns finished true.
 // pktLineParser reads until a terminating "0000" flush-pkt. It's good for a single use only.
 type pktLineParser struct {
-	// Total contains content of all pkt-lines combined, so that
-	// it's possible to match "start" and "end" points of all content.
-	Total []byte
+	// Lines contains all pkt-lines.
+	Lines []string
 
 	// Error contains the first error encountered while parsing, or nil otherwise.
 	Error error
@@ -29,7 +28,7 @@ type pktLineParser struct {
 // It will return early if it reaches end of pkt-line data (indicated by a flush-pkt "0000"),
 // or if it encounters a parsing error.
 // It must not be called when state is done.
-// When done, all of pkt-lines combined will be available in Total, and Error will be set if any error occurred.
+// When done, all of pkt-lines will be available in Lines, and Error will be set if any error occurred.
 func (p *pktLineParser) Feed(data []byte) {
 	for {
 		// If not enough data to reach next state, append it to buf and return.
@@ -105,7 +104,7 @@ func (p *pktLineParser) step() error {
 	case readingPayload:
 		p.state = readingLen
 		p.next = pktLenSize
-		p.Total = append(p.Total, p.buf...)
+		p.Lines = append(p.Lines, string(p.buf))
 		p.buf = p.buf[:0]
 		return nil
 	default:
@@ -140,5 +139,5 @@ func parseHex(h []byte) (uint16, error) {
 	case n != 2:
 		return 0, errors.New("short output")
 	}
-	return uint16(b[0])<<8 + uint16(b[1]), nil
+	return uint16(b[0])<<8 | uint16(b[1]), nil
 }
