@@ -23,6 +23,10 @@ type GitHttp struct {
 
 	// Event handling functions
 	EventHandler func(ev Event)
+
+	// FillRepo is called when a repository is not found. This function has the chance to get it from somewhere else.
+	// If this returns an error or is nil, then the git operation will fail
+	FillRepo func(string) error
 }
 
 // Implement the http.Handler interface
@@ -229,8 +233,17 @@ func (g *GitHttp) getGitDir(file_path string) (string, error) {
 	}
 
 	f := path.Join(root, file_path)
-	if _, err := os.Stat(f); os.IsNotExist(err) {
-		return "", err
+	_, statErr := os.Stat(f)
+	if os.IsNotExist(statErr) {
+		// if the repo doesn't exist, try to fill it in
+		if g.FillRepo != nil {
+			if err := g.FillRepo(f); err != nil {
+				return "", err
+			}
+		}
+		return "", statErr
+	} else if statErr != nil {
+		return "", statErr
 	}
 
 	return f, nil
