@@ -100,10 +100,38 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) error {
 	if err != nil {
 		return err
 	}
-	defer stdout.Close()
+
+	// This function will try to stop the rpc sub-process
+	defer func() {
+		if stdin != nil {
+			stdin.Close()
+		}
+
+		if stdout != nil {
+			stdout.Close()
+		}
+
+		// the wait command will block unless the stdin/stdout are closed.
+		cmd.Wait()
+	}()
+
+	fireEvent := func(err error) {
+		// Fire events
+		for _, e := range rpcReader.Events {
+			// Set directory to current repo
+			e.Dir = dir
+			e.Request = hr.r
+			e.Error = err
+
+			// Fire event
+			g.event(e)
+		}
+	}
 
 	err = cmd.Start()
 	if err != nil {
+		fireEvent(err)
+
 		return err
 	}
 
@@ -113,11 +141,20 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) error {
 	}
 
 	// Copy input to git binary
-	io.Copy(stdin, rpcReader)
-	stdin.Close()
+	_, err = io.Copy(stdin, rpcReader)
+
+	if err != nil {
+		fireEvent(err)
+
+		return err
+	}
 
 	// Write git binary's output to http response
-	io.Copy(w, gitReader)
+	_, err = io.Copy(w, gitReader)
+	if err != nil {
+		fireEvent(err)
+		return err
+	}
 
 	// Wait till command has completed
 	mainError := cmd.Wait()
@@ -126,16 +163,7 @@ func (g *GitHttp) serviceRpc(hr HandlerReq) error {
 		mainError = gitReader.GitError
 	}
 
-	// Fire events
-	for _, e := range rpcReader.Events {
-		// Set directory to current repo
-		e.Dir = dir
-		e.Request = hr.r
-		e.Error = mainError
-
-		// Fire event
-		g.event(e)
-	}
+	fireEvent(mainError)
 
 	// Because a response was already written,
 	// the header cannot be changed
