@@ -75,7 +75,7 @@ func (e EventType) UnmarshalJSON(data []byte) error {
 	case "fetch":
 		e = FETCH
 	default:
-		return fmt.Errorf("'%s' is not a known git event type")
+		return fmt.Errorf("'%s' is not a known git event type", str)
 	}
 	return nil
 }
