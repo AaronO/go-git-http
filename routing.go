@@ -90,7 +90,7 @@ func (g *GitHttp) requestHandler(w http.ResponseWriter, r *http.Request) {
 	file := strings.Replace(r.URL.Path, repo+"/", "", 1)
 
 	// Resolve directory
-	dir, err := g.getGitDir(repo)
+	dir, err := g.getGitDir(repo, r)
 
 	// Repo not found on disk
 	if err != nil {

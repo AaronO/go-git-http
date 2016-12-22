@@ -17,6 +17,9 @@ type AuthInfo struct {
 	// But could also be: "some_repo.git"
 	Repo string
 
+	// Request that needs to be authenticated in case you need access to additional headers or information about the request
+	Request *http.Request
+
 	// Are we pushing or fetching ?
 	Push  bool
 	Fetch bool
@@ -40,6 +43,7 @@ func Authenticator(authf func(AuthInfo) (bool, error)) func(http.Handler) http.H
 			info := AuthInfo{
 				Username: auth.Name,
 				Password: auth.Pass,
+				Request:  req,
 				Repo:     repoName(req.URL.Path),
 				Push:     isPush(req),
 				Fetch:    isFetch(req),
