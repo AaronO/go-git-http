@@ -10,6 +10,18 @@ import (
 	"strings"
 )
 
+// ResolveInfo describes an incoming request that needs to be resolved to an on disk path
+type ResolveInfo struct {
+	// Path of the repo for the incoming request, this differs from Request.URL.Path because it will not include extra information such as /info/refs.
+	Path string
+
+	// Request that needs to be resolved is included in case you need parameters like host headers in order to resolve a repo path
+	Request *http.Request
+}
+
+// PathResolver resolves a request path to a relative path on disk.
+type PathResolver func(info ResolveInfo) (string, error)
+
 type GitHttp struct {
 	// Root directory to serve repos from
 	ProjectRoot string
@@ -23,6 +35,9 @@ type GitHttp struct {
 
 	// Event handling functions
 	EventHandler func(ev Event)
+
+	// PathResolver allows you to customize the logic which maps request URLs to repository locations on disk. If nil, repository paths will be mapped directly to disk paths
+	PathResolver PathResolver
 }
 
 // Implement the http.Handler interface
@@ -216,7 +231,16 @@ func sendFile(content_type string, hr HandlerReq) error {
 	return nil
 }
 
-func (g *GitHttp) getGitDir(file_path string) (string, error) {
+func (g *GitHttp) getGitDir(file_path string, req *http.Request) (string, error) {
+
+	if g.PathResolver != nil {
+		var err error
+		file_path, err = g.PathResolver(ResolveInfo{Path: file_path, Request: req})
+		if err != nil {
+			return "", err
+		}
+	}
+
 	root := g.ProjectRoot
 
 	if root == "" {
