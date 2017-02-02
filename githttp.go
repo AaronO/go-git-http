@@ -20,6 +20,7 @@ type GitHttp struct {
 	// Access rules
 	UploadPack  bool
 	ReceivePack bool
+	AutoCreate  bool
 
 	// Event handling functions
 	EventHandler func(ev Event)
@@ -38,6 +39,7 @@ func New(root string) *GitHttp {
 		GitBinPath:  "/usr/bin/git",
 		UploadPack:  true,
 		ReceivePack: true,
+		AutoCreate:  false,
 	}
 }
 
@@ -231,7 +233,19 @@ func (g *GitHttp) getGitDir(file_path string) (string, error) {
 
 	f := path.Join(root, file_path)
 	if _, err := os.Stat(f); os.IsNotExist(err) {
-		return "", err
+		// If AutoCreate is false, just bail
+		if !g.AutoCreate {
+			return "", err
+		}
+		// If AutoCreate is true, attempt to create and initialise the directory
+		err = os.MkdirAll(f, os.ModePerm)
+		if err != nil {
+			return "", err
+		}
+		_, err = g.gitCommand(f, "--bare", "init")
+		if err != nil {
+			return "", err
+		}
 	}
 
 	return f, nil
