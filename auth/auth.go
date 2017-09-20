@@ -20,6 +20,8 @@ type AuthInfo struct {
 	// Are we pushing or fetching ?
 	Push  bool
 	Fetch bool
+
+	Request *http.Request
 }
 
 var (
@@ -43,6 +45,7 @@ func Authenticator(authf func(AuthInfo) (bool, error)) func(http.Handler) http.H
 				Repo:     repoName(req.URL.Path),
 				Push:     isPush(req),
 				Fetch:    isFetch(req),
+				Request:  req,
 			}
 
 			// Call authentication function
