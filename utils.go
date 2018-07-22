@@ -50,9 +50,15 @@ func renderMethodNotAllowed(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func renderNotFound(w http.ResponseWriter) {
+func renderNotFoundText(w http.ResponseWriter, text string) {
 	w.WriteHeader(http.StatusNotFound)
-	w.Write([]byte("Not Found"))
+	w.Write([]byte(text))
+}
+
+func renderNotFound(w http.ResponseWriter) {
+	const defaultNotFoundString = "Not Found"
+	w.WriteHeader(http.StatusNotFound)
+	w.Write([]byte(defaultNotFoundString))
 }
 
 func renderNoAccess(w http.ResponseWriter) {

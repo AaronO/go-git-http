@@ -14,6 +14,9 @@ type GitHttp struct {
 	// Root directory to serve repos from
 	ProjectRoot string
 
+	// Git service path prefix
+	UrlPrefix string
+
 	// Path to git binary
 	GitBinPath string
 
@@ -32,9 +35,10 @@ func (g *GitHttp) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Shorthand constructor for most common scenario
-func New(root string) *GitHttp {
+func New(root, urlPrefix string) *GitHttp {
 	return &GitHttp{
 		ProjectRoot: root,
+		UrlPrefix:   urlPrefix,
 		GitBinPath:  "/usr/bin/git",
 		UploadPack:  true,
 		ReceivePack: true,
@@ -231,7 +235,7 @@ func (g *GitHttp) getGitDir(file_path string) (string, error) {
 
 	f := path.Join(root, file_path)
 	if _, err := os.Stat(f); os.IsNotExist(err) {
-		return "", err
+		return f, err
 	}
 
 	return f, nil

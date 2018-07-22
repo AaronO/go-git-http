@@ -1,8 +1,10 @@
 package githttp
 
 import (
+	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -68,12 +70,14 @@ func (g *GitHttp) getService(path string) (string, *Service) {
 
 // Request handling function
 func (g *GitHttp) requestHandler(w http.ResponseWriter, r *http.Request) {
+	realPath := r.URL.Path[len(g.UrlPrefix):]
+
 	// Get service for URL
-	repo, service := g.getService(r.URL.Path)
+	repo, service := g.getService(realPath)
 
 	// No url match
 	if service == nil {
-		renderNotFound(w)
+		renderNotFoundText(w, "service not found")
 		return
 	}
 
@@ -87,15 +91,17 @@ func (g *GitHttp) requestHandler(w http.ResponseWriter, r *http.Request) {
 	rpc := service.Rpc
 
 	// Get specific file
-	file := strings.Replace(r.URL.Path, repo+"/", "", 1)
+	file := strings.Replace(realPath, repo+"/", "", 1)
 
 	// Resolve directory
 	dir, err := g.getGitDir(repo)
 
 	// Repo not found on disk
 	if err != nil {
-		renderNotFound(w)
-		return
+		if !filepath.IsAbs(dir) {
+			log.Fatalf("%v is not absolute path", dir)
+		}
+		RunCommandMust("git", "init", "--bare", dir)
 	}
 
 	// Build request info for handler
@@ -104,7 +110,7 @@ func (g *GitHttp) requestHandler(w http.ResponseWriter, r *http.Request) {
 	// Call handler
 	if err := service.Handler(hr); err != nil {
 		if os.IsNotExist(err) {
-			renderNotFound(w)
+			renderNotFoundText(w, "file not found on disk")
 			return
 		}
 		switch err.(type) {
